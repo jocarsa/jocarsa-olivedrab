@@ -29,7 +29,7 @@ window.onload = function() {
  * Initialize WebSocket connection to the server
  */
 function initWebSocket() {
-  ws = new WebSocket("ws://jocarsa.com:3000");
+  ws = new WebSocket("ws://localhost:3000");
 
   ws.onopen = () => {
     logOutput("WebSocket connected.");

@@ -19,7 +19,7 @@ window.onload = function() {
 };
 
 function initWebSocketLms() {
-  wsLms = new WebSocket("ws://jocarsa.com:3000");
+  wsLms = new WebSocket("ws://localhost:3000");
 
   wsLms.onopen = () => {
     logLms("LMS connected to server.");
