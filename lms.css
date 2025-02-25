@@ -21,8 +21,17 @@ body {
   padding: 15px;
   font-size: 1.5em;
   font-weight: bold;
+    display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	justify-content: center;
+	align-items: center;
+	align-content: stretch;
 }
-
+.lms-header img{
+    width:60px;
+    margin-right:20px;
+}
 /* Container for main layout */
 .lms-container {
   display: flex;

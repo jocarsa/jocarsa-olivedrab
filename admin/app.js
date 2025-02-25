@@ -1,40 +1,24 @@
-// app.js (Admin Panel)
-
-// Global references
 let ws = null;
 let outputArea = null;
+let currentAdmin = null;
 
 // Our data arrays
 let estudiantesList = [];
 let profesoresList  = [];
 let cursosList      = [];
 let asignaturasList = [];
-
-// NEW: We'll store the last known "temaList" so we can populate the "contenidoTemaSelect"
 let temaList = [];
 
-/**
- * On window load: set up the WebSocket, hide sections except "estudiantes"
- */
 window.onload = function() {
   outputArea = document.getElementById("outputArea");
   initWebSocket();
-
-  // Hide all sections except "estudiantes"
-  document.querySelectorAll(".admin-section").forEach(sec => sec.style.display = "none");
-  showSection("estudiantes");
 };
 
-/**
- * Initialize WebSocket connection to the server
- */
 function initWebSocket() {
   ws = new WebSocket("ws://localhost:3000");
 
   ws.onopen = () => {
     logOutput("WebSocket connected.");
-    // Load data for dropdowns
-    refreshAllDropdowns();
   };
 
   ws.onmessage = (event) => {
@@ -47,28 +31,6 @@ function initWebSocket() {
   };
 }
 
-/**
- * Toggle the server log panel's visibility
- */
-function toggleLog() {
-  const panel = document.getElementById("outputPanel");
-  panel.classList.toggle("hidden");
-}
-
-/**
- * Show only one section (by ID), hide the others
- */
-function showSection(name) {
-  document.querySelectorAll(".admin-section").forEach(sec => {
-    sec.style.display = "none";
-  });
-  const target = document.getElementById("section-" + name);
-  if (target) target.style.display = "block";
-}
-
-/**
- * Log messages to the outputArea
- */
 function logOutput(msg) {
   if (outputArea) {
     outputArea.textContent += msg + "\n";
@@ -76,11 +38,26 @@ function logOutput(msg) {
   }
 }
 
-/**
- * Parse server responses. If it starts with "Estudiantes:", "Profesores:", etc., we parse them.
- */
+function attemptAdminLogin() {
+  let username = document.getElementById("adminUsername").value.trim();
+  let password = document.getElementById("adminPassword").value.trim();
+
+  if (!username || !password) {
+    alert("Enter username/password");
+    return;
+  }
+
+  ws.send(`loginAdmin: ${username},${password}`);
+}
+
 function handleServerResponse(data) {
-  if (data.startsWith("Estudiantes:")) {
+  if (data.startsWith("OK: Admin ")) {
+    let name = data.substring("OK: Admin ".length).trim();
+    currentAdmin = { username: document.getElementById("adminUsername").value, name };
+    showAdminPanel();
+  } else if (data.startsWith("ERROR: Invalid admin credentials")) {
+    alert("Invalid credentials");
+  } else if (data.startsWith("Estudiantes:")) {
     parseEstudiantesList(data);
   } else if (data.startsWith("Profesores:")) {
     parseProfesoresList(data);
@@ -89,21 +66,36 @@ function handleServerResponse(data) {
   } else if (data.startsWith("Asignaturas:")) {
     parseAsignaturasList(data);
   } else if (data.startsWith("Temas in Asignatura")) {
-    parseTemasList(data);  // fill temaList + fix "contenidoTemaSelect"
+    parseTemasList(data);
   } else if (data.startsWith("Contenidos in Tema")) {
     parseContenidosList(data);
   }
-  // else, it's likely a response to a create/update/delete or an error.
 }
 
-/* ========================================================================
-   ESTUDIANTES
-========================================================================= */
+function showAdminPanel() {
+  document.getElementById("loginPanel").classList.add("hidden");
+  document.querySelector(".admin-nav").classList.remove("hidden");
+    document.getElementById("adminMainContent").classList.remove("hidden");
+  refreshAllDropdowns();
+  showSection('estudiantes'); // Show the first section by default
+}
+
+function toggleLog() {
+  const panel = document.getElementById("outputPanel");
+  panel.classList.toggle("hidden");
+}
+
+function showSection(name) {
+  document.querySelectorAll(".admin-section").forEach(sec => {
+    sec.style.display = "none";
+  });
+  const target = document.getElementById("section-" + name);
+  if (target) target.style.display = "block";
+}
+
 function createEstudiante() {
   let name = document.getElementById("estudianteName").value.trim();
   let edad = document.getElementById("estudianteEdad").value.trim();
-
-  // Optional username/password
   let user = document.getElementById("estudianteUser").value.trim();
   let pass = document.getElementById("estudiantePass").value.trim();
 
@@ -113,10 +105,8 @@ function createEstudiante() {
   }
 
   if (user && pass) {
-    // 4-arg
     ws.send(`createStudent: ${name},${edad},${user},${pass}`);
   } else {
-    // 2-arg
     ws.send(`createStudent: ${name},${edad}`);
   }
 
@@ -128,9 +118,6 @@ function listEstudiantes() {
 }
 
 function parseEstudiantesList(rawText) {
-  // e.g.
-  // Estudiantes:
-  //  - John (Edad: 25)
   estudiantesList = [];
   const lines = rawText.split("\n");
   let tableBody = document.querySelector("#estudiantesTable tbody");
@@ -139,7 +126,7 @@ function parseEstudiantesList(rawText) {
   for (let i=1; i<lines.length; i++) {
     let line = lines[i].trim();
     if (line.startsWith("- ")) {
-      line = line.substring(2).trim(); // e.g. "John (Edad: 25)"
+      line = line.substring(2).trim();
       let match = line.match(/(.+)\(Edad:\s*(\d+)\)/);
       if (match) {
         let nombre = match[1].trim();
@@ -159,7 +146,7 @@ function parseEstudiantesList(rawText) {
     }
   }
 
-  populateEstudiantesDropdown(); // For enrollment
+  populateEstudiantesDropdown();
 }
 
 function editEstudiante(oldName, oldAge) {
@@ -178,13 +165,9 @@ function deleteEstudiante(name) {
   setTimeout(listEstudiantes, 500);
 }
 
-/* ========================================================================
-   PROFESORES
-========================================================================= */
 function createProfesor() {
   let name = document.getElementById("profesorName").value.trim();
   let esp  = document.getElementById("profesorEsp").value.trim();
-
   let user = document.getElementById("profesorUser").value.trim();
   let pass = document.getElementById("profesorPass").value.trim();
 
@@ -194,10 +177,8 @@ function createProfesor() {
   }
 
   if (user && pass) {
-    // 4-arg
     ws.send(`createProfesor: ${name},${esp},${user},${pass}`);
   } else {
-    // 2-arg
     ws.send(`createProfesor: ${name},${esp}`);
   }
 
@@ -217,7 +198,7 @@ function parseProfesoresList(rawText) {
   for (let i=1; i<lines.length; i++) {
     let line = lines[i].trim();
     if (line.startsWith("- ")) {
-      line = line.substring(2).trim(); // e.g. "Alice (Especialidad: Math)"
+      line = line.substring(2).trim();
       let match = line.match(/(.+)\(Especialidad:\s*(.+)\)/);
       if (match) {
         let nombre = match[1].trim();
@@ -256,14 +237,11 @@ function deleteProfesor(name) {
   setTimeout(listProfesores, 500);
 }
 
-/* ========================================================================
-   CURSOS
-========================================================================= */
 function createCurso() {
   let name = document.getElementById("cursoName").value.trim();
   let dur  = document.getElementById("cursoDuracion").value.trim();
   if (!name || !dur) {
-    alert("Ingresa nombre y duracion para el curso");
+    alert("Ingresa nombre y duración para el curso");
     return;
   }
   ws.send(`createCurso: ${name},${dur}`);
@@ -284,7 +262,6 @@ function parseCursosList(rawText) {
     let line = lines[i].trim();
     if (line.startsWith("- ")) {
       line = line.substring(2).trim();
-      // e.g. "Java101 (Duración: 40)"
       let match = line.match(/(.+)\(Duración:\s*(\d+)\)/);
       if (match) {
         let nombre   = match[1].trim();
@@ -322,9 +299,6 @@ function deleteCurso(name) {
   setTimeout(listCursos, 500);
 }
 
-/* ========================================================================
-   ASIGNATURAS
-========================================================================= */
 function createAsignatura() {
   let asigName  = document.getElementById("asignaturaName").value.trim();
   let cursoName = document.getElementById("asignaturaCursoSelect").value;
@@ -350,7 +324,6 @@ function parseAsignaturasList(rawText) {
     let line = lines[i].trim();
     if (line.startsWith("- ")) {
       line = line.substring(2).trim();
-      // e.g. "Algebra1 (Curso: Java101)"
       let match = line.match(/(.+)\(Curso:\s*(.+)\)/);
       if (match) {
         let asigName  = match[1].trim();
@@ -389,9 +362,6 @@ function deleteAsignatura(name) {
   setTimeout(listAsignaturas, 500);
 }
 
-/* ========================================================================
-   TEMAS
-========================================================================= */
 function createTema() {
   let asig = document.getElementById("temaAsignaturaSelect").value;
   let temaName = document.getElementById("temaName").value.trim();
@@ -415,11 +385,7 @@ function listTemas(asigName) {
 }
 
 function parseTemasList(rawText) {
-  // e.g.
-  // Temas in Asignatura 'Algebra1':
-  //  - Introduccion
-  temaList = []; // important: store so we can populate the "contenidoTemaSelect"
-
+  temaList = [];
   let lines = rawText.split("\n");
   let match = lines[0].match(/Temas in Asignatura '(.+)'/);
   let asigName = (match && match[1]) ? match[1] : "";
@@ -431,7 +397,7 @@ function parseTemasList(rawText) {
     let line = lines[i].trim();
     if (line.startsWith("- ")) {
       let temaName = line.substring(2).trim();
-      temaList.push({ temaName, asigName }); // store it
+      temaList.push({ temaName, asigName });
 
       let tr = document.createElement("tr");
       tr.innerHTML = `
@@ -445,7 +411,6 @@ function parseTemasList(rawText) {
     }
   }
 
-  // FIX: now populate "contenidoTemaSelect"
   populateTemaDropdown();
 }
 
@@ -462,9 +427,6 @@ function deleteTema(asigName, temaName) {
   setTimeout(() => listTemas(asigName), 500);
 }
 
-/* ========================================================================
-   CONTENIDOS
-========================================================================= */
 function createContenido() {
   let asig = document.getElementById("contenidoAsigSelect").value;
   let tema = document.getElementById("contenidoTemaSelect").value;
@@ -490,9 +452,6 @@ function listContenidos(asigName, temaName) {
 }
 
 function parseContenidosList(rawText) {
-  // e.g. 
-  // Contenidos in Tema 'Intro' of Asignatura 'Algebra1':
-  //  - [Titulo] Texto
   let lines = rawText.split("\n");
   let match = lines[0].match(/Contenidos in Tema '(.+)' of Asignatura '(.+)'/);
   let temaName = "";
@@ -508,23 +467,24 @@ function parseContenidosList(rawText) {
   for (let i=1; i<lines.length; i++) {
     let line = lines[i].trim();
     if (line.startsWith("- [")) {
-      line = line.substring(2).trim(); // remove "- "
+      line = line.substring(2).trim();
       let bracketPos = line.indexOf("]");
-      if (bracketPos < 0) continue;
-      let titulo = line.substring(1, bracketPos); 
-      let texto  = line.substring(bracketPos+1).trim();
+      if (bracketPos > 0) {
+        let titulo = line.substring(1, bracketPos);
+        let texto  = line.substring(bracketPos+1).trim();
 
-      let tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${titulo}</td>
-        <td>${texto}</td>
-        <td>${temaName}</td>
-        <td>${asigName}</td>
-        <td>
-          <button class="action-btn" onclick="editContenido('${asigName}','${temaName}','${titulo}','${texto}')">Edit</button>
-          <button class="action-btn" onclick="deleteContenido('${asigName}','${temaName}','${titulo}')">Delete</button>
-        </td>`;
-      tableBody.appendChild(tr);
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${titulo}</td>
+          <td>${texto}</td>
+          <td>${temaName}</td>
+          <td>${asigName}</td>
+          <td>
+            <button class="action-btn" onclick="editContenido('${asigName}','${temaName}','${titulo}','${texto}')">Edit</button>
+            <button class="action-btn" onclick="deleteContenido('${asigName}','${temaName}','${titulo}')">Delete</button>
+          </td>`;
+        tableBody.appendChild(tr);
+      }
     }
   }
 }
@@ -545,9 +505,6 @@ function deleteContenido(asig, tema, titulo) {
   setTimeout(() => listContenidos(asig, tema), 500);
 }
 
-/* ========================================================================
-   ENROLL (Estudiantes / Profesores)
-========================================================================= */
 function enrollEstudiante() {
   let asigName = document.getElementById("enrollAsignaturaSelectEst").value;
   let estName  = document.getElementById("enrollEstudianteSelect").value;
@@ -568,18 +525,13 @@ function enrollProfesor() {
   ws.send(`enrollProfesor: ${asigName},${profName}`);
 }
 
-/* ========================================================================
-   DROPDOWN population
-========================================================================= */
 function refreshAllDropdowns() {
-  // fetch everything
   listEstudiantes();
   listProfesores();
   listCursos();
   listAsignaturas();
 }
 
-// after parse
 function populateEstudiantesDropdown() {
   let estSel = document.getElementById("enrollEstudianteSelect");
   estSel.innerHTML = "";
@@ -649,7 +601,6 @@ function populateAsignaturasDropdown() {
   });
 }
 
-// Populate "contenidoTemaSelect" from the global "temaList"
 function populateTemaDropdown() {
   let sel = document.getElementById("contenidoTemaSelect");
   sel.innerHTML = "";

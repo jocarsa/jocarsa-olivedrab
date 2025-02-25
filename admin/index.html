@@ -2,20 +2,32 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>jocarsa | olivedrab</title>
+  <title>Admin Panel</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
 <!-- Header -->
 <header class="admin-header">
-  <div class="admin-logo">jocarsa | olivedrab - Admin</div>
-      <button class="log-toggle-btn" onclick="toggleLog()">Mostrar Log</button>
-
+    <img src="olivedrab.png">
+  <div class="admin-logo">jocarsa | olivedrab</div>
+  <button class="log-toggle-btn" onclick="toggleLog()">Mostrar Log</button>
 </header>
 
+<!-- Login Panel -->
+<div id="loginPanel" class="login-panel">
+  <h2>Admin Login</h2>
+  <label>Username:</label>
+  <input type="text" id="adminUsername" class="admin-input" />
+  <br>
+  <label>Password:</label>
+  <input type="password" id="adminPassword" class="admin-input" />
+  <br><br>
+  <button onclick="attemptAdminLogin()">Login</button>
+</div>
+
 <!-- Left Navigation -->
-<nav class="admin-nav">
+<nav class="admin-nav hidden">
   <ul>
     <li><a href="#" onclick="showSection('estudiantes')">Estudiantes</a></li>
     <li><a href="#" onclick="showSection('profesores')">Profesores</a></li>
@@ -23,32 +35,26 @@
     <li><a href="#" onclick="showSection('asignaturas')">Asignaturas</a></li>
     <li><a href="#" onclick="showSection('temas')">Temas</a></li>
     <li><a href="#" onclick="showSection('contenidos')">Contenidos</a></li>
-    <li><a href="#" onclick="showSection('enroll')">Enroll / Linking</a></li>
+    <li><a href="#" onclick="showSection('enroll')">Inscripciones</a></li>
   </ul>
 </nav>
 
 <!-- Main Content -->
-<main class="admin-main">
-
-  <!-- Estudiantes Section -->
+<main class="admin-main hidden" id="adminMainContent">
+  <!-- Admin sections will be shown here after login -->
   <section id="section-estudiantes" class="admin-section">
     <h2>Gestionar Estudiantes</h2>
     <div class="form-group">
       <label>Nombre:</label>
       <input type="text" id="estudianteName" placeholder="Ej. Juan" />
-
       <label>Edad:</label>
       <input type="number" id="estudianteEdad" placeholder="Ej. 23" />
-
-      <!-- NEW FIELDS for username, password -->
       <label>Username:</label>
       <input type="text" id="estudianteUser" placeholder="(Opcional)" />
       <label>Password:</label>
       <input type="text" id="estudiantePass" placeholder="(Opcional)" />
-
       <button onclick="createEstudiante()">Crear Estudiante</button>
     </div>
-
     <div class="list-container">
       <button class="refresh-btn" onclick="listEstudiantes()">Listar Estudiantes</button>
       <table id="estudiantesTable" class="crud-table">
@@ -64,25 +70,19 @@
     </div>
   </section>
 
-  <!-- Profesores Section -->
   <section id="section-profesores" class="admin-section">
     <h2>Gestionar Profesores</h2>
     <div class="form-group">
       <label>Nombre:</label>
       <input type="text" id="profesorName" placeholder="Ej. Maria" />
-
       <label>Especialidad:</label>
       <input type="text" id="profesorEsp" placeholder="Ej. Matemáticas" />
-
-      <!-- NEW FIELDS for username, password -->
       <label>Username:</label>
       <input type="text" id="profesorUser" placeholder="(Opcional)" />
       <label>Password:</label>
       <input type="text" id="profesorPass" placeholder="(Opcional)" />
-
       <button onclick="createProfesor()">Crear Profesor</button>
     </div>
-
     <div class="list-container">
       <button class="refresh-btn" onclick="listProfesores()">Listar Profesores</button>
       <table id="profesoresTable" class="crud-table">
@@ -98,7 +98,6 @@
     </div>
   </section>
 
-  <!-- Cursos Section -->
   <section id="section-cursos" class="admin-section">
     <h2>Gestionar Cursos</h2>
     <div class="form-group">
@@ -108,7 +107,6 @@
       <input type="number" id="cursoDuracion" placeholder="Ej. 40" />
       <button onclick="createCurso()">Crear Curso</button>
     </div>
-
     <div class="list-container">
       <button class="refresh-btn" onclick="listCursos()">Listar Cursos</button>
       <table id="cursosTable" class="crud-table">
@@ -124,7 +122,6 @@
     </div>
   </section>
 
-  <!-- Asignaturas Section -->
   <section id="section-asignaturas" class="admin-section">
     <h2>Gestionar Asignaturas</h2>
     <div class="form-group">
@@ -134,7 +131,6 @@
       <select id="asignaturaCursoSelect"></select>
       <button onclick="createAsignatura()">Crear Asignatura</button>
     </div>
-
     <div class="list-container">
       <button class="refresh-btn" onclick="listAsignaturas()">Listar Asignaturas</button>
       <table id="asignaturasTable" class="crud-table">
@@ -150,7 +146,6 @@
     </div>
   </section>
 
-  <!-- Temas Section -->
   <section id="section-temas" class="admin-section">
     <h2>Gestionar Temas</h2>
     <div class="form-group">
@@ -175,7 +170,6 @@
     </div>
   </section>
 
-  <!-- Contenidos Section -->
   <section id="section-contenidos" class="admin-section">
     <h2>Gestionar Contenidos</h2>
     <div class="form-group">
@@ -208,10 +202,8 @@
     </div>
   </section>
 
-  <!-- Enroll / Linking Section -->
   <section id="section-enroll" class="admin-section">
     <h2>Inscripciones</h2>
-    <!-- Enroll Estudiante in Asignatura -->
     <div class="form-group">
       <label>Asignatura:</label>
       <select id="enrollAsignaturaSelectEst"></select>
@@ -219,8 +211,6 @@
       <select id="enrollEstudianteSelect"></select>
       <button onclick="enrollEstudiante()">Inscribir Estudiante</button>
     </div>
-    <br/>
-    <!-- Enroll Profesor in Asignatura -->
     <div class="form-group">
       <label>Asignatura:</label>
       <select id="enrollAsignaturaSelectProf"></select>
@@ -229,11 +219,10 @@
       <button onclick="enrollProfesor()">Inscribir Profesor</button>
     </div>
   </section>
-
 </main>
 
 <!-- Debug output area -->
-<div class="output-panel" id="outputPanel">
+<div class="output-panel hidden" id="outputPanel">
   <h3>Server Log</h3>
   <pre id="outputArea"></pre>
 </div>
